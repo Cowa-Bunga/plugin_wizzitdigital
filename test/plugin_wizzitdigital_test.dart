@@ -10,6 +10,9 @@ class MockPluginWizzitdigitalPlatform
 
   @override
   Future<String?> getPlatformVersion() => Future.value('42');
+
+  @override
+  Future<void> init() => Future.value();
 }
 
 void main() {
@@ -20,10 +23,19 @@ void main() {
   });
 
   test('getPlatformVersion', () async {
-    PluginWizzitdigital pluginWizzitdigitalPlugin = PluginWizzitdigital();
-    MockPluginWizzitdigitalPlatform fakePlatform = MockPluginWizzitdigitalPlatform();
+    final pluginWizzitdigitalPlugin = PluginWizzitdigital();
+    final fakePlatform = MockPluginWizzitdigitalPlatform();
     PluginWizzitdigitalPlatform.instance = fakePlatform;
   
     expect(await pluginWizzitdigitalPlugin.getPlatformVersion(), '42');
+  });
+
+
+  test('init', () async {
+    final pluginWizzitdigitalPlugin = PluginWizzitdigital();
+    final fakePlatform = MockPluginWizzitdigitalPlatform();
+    PluginWizzitdigitalPlatform.instance = fakePlatform;
+
+    // expect(await pluginWizzitdigitalPlugin.getPlatformVersion(), toBe('42'));
   });
 }
