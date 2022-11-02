@@ -1,88 +1,44 @@
 package com.loop.plugin_wizzitdigital
 
+import android.app.Activity
+import android.content.Intent
+import android.provider.ContactsContract
 import androidx.annotation.NonNull
+
 import io.flutter.embedding.engine.plugins.FlutterPlugin
-import io.flutter.plugin.common.EventChannel
+import io.flutter.embedding.engine.plugins.activity.ActivityAware
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import io.flutter.plugin.common.PluginRegistry
+import io.flutter.plugin.common.PluginRegistry.Registrar
 
-data class Events(
-    var onCreate: EventChannel,
-    var onResume: EventChannel,
-    var onAdapterInitializing: EventChannel,
-    var onAdapterInitComplete: EventChannel,
-    var onSessionInitComplete: EventChannel,
-    var onSessionCountdown: EventChannel,
-    var onSessionTimeout: EventChannel,
-    var onCardProcessing: EventChannel,
-    var onCardProcessingComplete: EventChannel,
-    var onCardProcessingNotify: EventChannel,
-    var onCardRemoved: EventChannel,
-    var onCheckDeviceRegistrationComplete: EventChannel,
-    var onDeviceRegistrationComplete: EventChannel,
-    var onSessionComplete: EventChannel,
-)
+class WizzitdigitalPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.ActivityResultListener {
 
-/** WizzitdigitalPlugin */
-class WizzitdigitalPlugin : FlutterPlugin, MethodCallHandler {
-    /// The MethodChannel that will the communication between Flutter and native Android
-    ///
-    /// This local reference serves to register the plugin with the Flutter Engine and unregister it
-    /// when the Flutter Engine is detached from the Activity
+    val PICK_CONTACT_RESULT_CODE = 36
+    var act: Activity? = null
     private lateinit var channel: MethodChannel
-    private lateinit var tapToPay: TapToPay
+    private lateinit var result: Result
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "plugin_wizzitdigital")
         channel.setMethodCallHandler(this)
-
-        val onCreate = EventChannel(flutterPluginBinding.binaryMessenger, "onCreate")
-        val onResume = EventChannel(flutterPluginBinding.binaryMessenger, "onResume")
-        val onAdapterInitializing = EventChannel(flutterPluginBinding.binaryMessenger, "onAdapterInitializing")
-        val onAdapterInitComplete = EventChannel(flutterPluginBinding.binaryMessenger, "onAdapterInitComplete")
-        val onSessionInitComplete = EventChannel(flutterPluginBinding.binaryMessenger, "onSessionInitComplete")
-        val onSessionCountdown = EventChannel(flutterPluginBinding.binaryMessenger, "onSessionCountdown")
-        val onSessionTimeout = EventChannel(flutterPluginBinding.binaryMessenger, "onSessionTimeout")
-        val onCardProcessing = EventChannel(flutterPluginBinding.binaryMessenger, "onCardProcessing")
-        val onCardProcessingComplete = EventChannel(flutterPluginBinding.binaryMessenger, "onCardProcessingComplete")
-        val onCardProcessingNotify = EventChannel(flutterPluginBinding.binaryMessenger, "onCardProcessingNotify")
-        val onCardRemoved = EventChannel(flutterPluginBinding.binaryMessenger, "onCardRemoved")
-        val onCheckDeviceRegistrationComplete =
-            EventChannel(flutterPluginBinding.binaryMessenger, "onCheckDeviceRegistrationComplete")
-        val onDeviceRegistrationComplete =
-            EventChannel(flutterPluginBinding.binaryMessenger, "onDeviceRegistrationComplete")
-        val onSessionComplete = EventChannel(flutterPluginBinding.binaryMessenger, "onSessionComplete")
-    
-        tapToPay = TapToPay(
-            Events(
-                onCreate,
-                onResume,
-                onAdapterInitializing,
-                onAdapterInitComplete,
-                onSessionInitComplete,
-                onSessionCountdown,
-                onSessionTimeout,
-                onCardProcessing,
-                onCardProcessingComplete,
-                onCardProcessingNotify,
-                onCardRemoved,
-                onCheckDeviceRegistrationComplete,
-                onDeviceRegistrationComplete,
-                onSessionComplete,
-            )
-        )
     }
 
-    // New
-
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
-        // Leave this one as as simple test calle
-        if (call.method.equals("getPlatformVersion")) {
-            result.success("Android ${android.os.Build.VERSION.RELEASE}")
-        } else if (call.method.equals("init")) {
-            tapToPay.onCreate(null)
+        this.result = result
+        if (call.method == "init") {
+            val intent = Intent("com.wizzitdigital.emv.sdk.EMVCONFIG")
+            val config = call.arguments as Map<String, Any>
+
+            for ((key, value) in config) {
+                intent!!.putExtra(key, value)
+            }
+            println("intent: $config")
+
+            act?.startActivityForResult(intent, PICK_CONTACT_RESULT_CODE)
         } else {
             result.notImplemented()
         }
@@ -90,5 +46,68 @@ class WizzitdigitalPlugin : FlutterPlugin, MethodCallHandler {
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
+    }
+
+    override fun onAttachedToActivity(binding: ActivityPluginBinding) {
+        act = binding.activity
+        binding.addActivityResultListener(this)
+    }
+
+    override fun onDetachedFromActivityForConfigChanges() {
+        act = null;
+    }
+
+    override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
+        act = binding.activity
+        binding.addActivityResultListener(this)
+    }
+
+    override fun onDetachedFromActivity() {
+        act = null;
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
+        var resultMap = mutableMapOf<String, Any>()
+        val bundle = data?.extras
+
+        val keys = if (bundle?.keySet() == null) {
+            listOf()
+        } else {
+            bundle.keySet()
+        }
+        for (key in keys) {
+            val value = bundle?.get(key)
+            val resultValue = if (value == null) "null" else value as Any
+            println("CHECKPOINT Sending app received ${key}: ${resultValue.toString()}")
+            resultMap.put(key, resultValue)
+        }
+        result.success(resultMap)
+        return true
+    }
+
+
+    private fun Intent.putExtra(key: String, value: Any) {
+        when (value) {
+            is String ->
+                putExtra(key, value.toString())
+
+            is Int ->
+                putExtra(key, value.toInt())
+
+            is Byte ->
+                putExtra(key, value.toByte())
+
+            is Char ->
+                putExtra(key, value.toChar())
+
+            is Short ->
+                putExtra(key, value.toShort())
+
+            is Double ->
+                putExtra(key, value.toDouble())
+
+            is Boolean ->
+                putExtra(key, value)
+        }
     }
 }
