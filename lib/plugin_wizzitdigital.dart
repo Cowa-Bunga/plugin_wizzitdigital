@@ -10,11 +10,9 @@ class PluginWizzitdigital {
     );
   }
 
-  static Future<Map<String, dynamic>?> transaction(
-      Map<String, dynamic> transaction) {
-    return methodChannel.invokeMethod<Map<String, dynamic>>(
-      'transaction',
-      transaction,
-    );
+  static Future<dynamic> transaction(
+    Map<String, dynamic> transaction,
+  ) {
+    return methodChannel.invokeMethod('transaction', transaction);
   }
 }

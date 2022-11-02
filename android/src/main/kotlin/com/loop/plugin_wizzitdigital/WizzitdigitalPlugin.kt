@@ -36,7 +36,15 @@ class WizzitdigitalPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, Plu
             for ((key, value) in config) {
                 intent!!.putExtra(key, value)
             }
-            println("intent: $config")
+
+            act?.startActivityForResult(intent, PICK_CONTACT_RESULT_CODE)
+        } else if (call.method == "transaction") {
+            val intent = Intent("com.wizzitdigital.emv.sdk.EMVTX")
+            val config = call.arguments as Map<String, Any>
+
+            for ((key, value) in config) {
+                intent!!.putExtra(key, value)
+            }
 
             act?.startActivityForResult(intent, PICK_CONTACT_RESULT_CODE)
         } else {
@@ -81,7 +89,7 @@ class WizzitdigitalPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, Plu
             println("CHECKPOINT Sending app received ${key}: ${resultValue.toString()}")
             resultMap.put(key, resultValue)
         }
-        result.success(resultMap)
+        result.success(resultMap.toMap<String, Any>())
         return true
     }
 
