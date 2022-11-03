@@ -17,7 +17,7 @@ import io.flutter.plugin.common.PluginRegistry.Registrar
 
 class WizzitdigitalPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.ActivityResultListener {
 
-    val PICK_CONTACT_RESULT_CODE = 36
+    val TRIGGER_TJ = 36
     var act: Activity? = null
     private lateinit var channel: MethodChannel
     private lateinit var result: Result
@@ -37,7 +37,7 @@ class WizzitdigitalPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, Plu
                 intent!!.putExtra(key, value)
             }
 
-            act?.startActivityForResult(intent, PICK_CONTACT_RESULT_CODE)
+            act?.startActivityForResult(intent, TRIGGER_TJ)
         } else if (call.method == "transaction") {
             val intent = Intent("com.wizzitdigital.emv.sdk.EMVTX")
             val config = call.arguments as Map<String, Any>
@@ -46,7 +46,7 @@ class WizzitdigitalPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, Plu
                 intent!!.putExtra(key, value)
             }
 
-            act?.startActivityForResult(intent, PICK_CONTACT_RESULT_CODE)
+            act?.startActivityForResult(intent, TRIGGER_TJ)
         } else {
             result.notImplemented()
         }
@@ -75,21 +75,27 @@ class WizzitdigitalPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, Plu
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
-        var resultMap = mutableMapOf<String, Any>()
-        val bundle = data?.extras
+        if (requestCode == TRIGGER_TJ) {
+            if (resultCode == Activity.RESULT_OK) {
+                println("we have landed in the success area")
+                var resultMap = mutableMapOf<String, Any>()
+                val bundle = data?.extras
 
-        val keys = if (bundle?.keySet() == null) {
-            listOf()
-        } else {
-            bundle.keySet()
+                val keys = if (bundle?.keySet() == null) {
+                    listOf()
+                } else {
+                    bundle.keySet()
+                }
+                for (key in keys) {
+                    val value = bundle?.get(key)
+                    val resultValue = if (value == null) "null" else value as Any
+                    println("CHECKPOINT Sending app received ${key}: ${resultValue.toString()}")
+                    resultMap.put(key, resultValue)
+
+                    result.success(resultMap.toMap<String, Any>())
+                }
+            }
         }
-        for (key in keys) {
-            val value = bundle?.get(key)
-            val resultValue = if (value == null) "null" else value as Any
-            println("CHECKPOINT Sending app received ${key}: ${resultValue.toString()}")
-            resultMap.put(key, resultValue)
-        }
-        result.success(resultMap.toMap<String, Any>())
         return true
     }
 
