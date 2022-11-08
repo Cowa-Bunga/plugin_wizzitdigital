@@ -92,8 +92,9 @@ class WizzitdigitalPlugin : FlutterPlugin, MethodCallHandler, ActivityAware, Plu
                     println("CHECKPOINT Sending app received ${key}: ${resultValue.toString()}")
                     resultMap.put(key, resultValue)
 
-                    result.success(resultMap.toMap<String, Any>())
                 }
+                
+                result.success(resultMap.toMap<String, Any>())
             }
         }
         return true
