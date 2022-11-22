@@ -1,6 +1,6 @@
 name: plugin_wizzitdigital
 description: Flutter integration plugin for Wizzit Digital tap to pay
-version: 0.0.1
+version: 0.0.2
 
 environment:
   sdk: ">=2.17.5 <3.0.0"
